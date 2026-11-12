@@ -1,0 +1,98 @@
+# Runs the whole MediSlot setup on one machine.
+# Expects the service repos to be cloned next to this folder:
+#   medislot/
+#     auth-service/
+#     doctor-service/
+#     appointment-service/
+#     medislot-ui/
+#     medislot-deploy/   <- run `docker compose up --build` from here
+
+# same signing key for the three services that deal with login tokens
+x-jwt: &jwt
+  JWT_SECRET: compose-medislot-jwt-2b6e91c4d7f03a58
+
+services:
+  doctor-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: doctor_user
+      POSTGRES_PASSWORD: doctor_pass
+      POSTGRES_DB: doctor_db
+    volumes:
+      - doctor-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U doctor_user -d doctor_db"]
+      interval: 5s
+      retries: 10
+
+  appointment-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: appt_user
+      POSTGRES_PASSWORD: appt_pass
+      POSTGRES_DB: appointment_db
+    volumes:
+      - appointment-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appt_user -d appointment_db"]
+      interval: 5s
+      retries: 10
+
+  auth-service:
+    build: ../auth-service
+    image: medislot/auth-service:1.0
+    ports:
+      - "4002:4002"
+    environment:
+      <<: *jwt
+
+  doctor-service:
+    build: ../doctor-service
+    image: medislot/doctor-service:1.0
+    ports:
+      - "4001:4001"
+    environment:
+      DB_HOST: doctor-db
+      DB_USER: doctor_user
+      DB_PASSWORD: doctor_pass
+      DB_NAME: doctor_db
+      <<: *jwt
+    depends_on:
+      doctor-db:
+        condition: service_healthy
+
+  appointment-service:
+    build: ../appointment-service
+    image: medislot/appointment-service:1.0
+    ports:
+      - "5002:5002"
+    environment:
+      DB_HOST: appointment-db
+      DB_USER: appt_user
+      DB_PASSWORD: appt_pass
+      DB_NAME: appointment_db
+      DOCTOR_SERVICE_URL: http://doctor-service:4001
+      <<: *jwt
+    depends_on:
+      appointment-db:
+        condition: service_healthy
+      doctor-service:
+        condition: service_started
+
+  medislot-ui:
+    build: ../medislot-ui
+    image: medislot/medislot-ui:1.0
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:4002
+      DOCTOR_SERVICE_URL: http://doctor-service:4001
+      APPOINTMENT_SERVICE_URL: http://appointment-service:5002
+    depends_on:
+      - auth-service
+      - doctor-service
+      - appointment-service
+
+volumes:
+  doctor-data:
+  appointment-data:

@@ -1,0 +1,8 @@
+node_modules
+npm-debug.log
+test
+k8s
+.git
+.github
+.env
+README.md

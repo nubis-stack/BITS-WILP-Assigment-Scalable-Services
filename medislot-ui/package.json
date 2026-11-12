@@ -1,0 +1,19 @@
+{
+  "name": "medislot-ui",
+  "version": "1.0.0",
+  "description": "MediSlot web UI - also forwards /api calls to the backend services",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test test/server.test.js"
+  },
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "morgan": "^1.10.0"
+  }
+}

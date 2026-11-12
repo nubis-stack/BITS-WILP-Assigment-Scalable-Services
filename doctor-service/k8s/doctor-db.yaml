@@ -1,0 +1,78 @@
+# Postgres used only by doctor-service (database per service)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: doctor-db-secret
+  namespace: medislot
+type: Opaque
+stringData:
+  POSTGRES_USER: doctor_user
+  POSTGRES_PASSWORD: doctor_pass
+  POSTGRES_DB: doctor_db
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: doctor-db-pvc
+  namespace: medislot
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: doctor-db
+  namespace: medislot
+  labels:
+    app: doctor-db
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: doctor-db
+  template:
+    metadata:
+      labels:
+        app: doctor-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: doctor-db-secret
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "doctor_user", "-d", "doctor_db"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: doctor-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doctor-db
+  namespace: medislot
+spec:
+  selector:
+    app: doctor-db
+  ports:
+    - port: 5432
+      targetPort: 5432
