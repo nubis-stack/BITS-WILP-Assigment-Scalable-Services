@@ -1,7 +1,5 @@
 # MediSlot - Clinic Appointment Booking System
-
-SEZG583 Scalable Services assignment. Four microservices, each in its own folder
-with its own Dockerfile, Kubernetes manifests and tests.
+Four microservices, each in its own folder with its own Dockerfile, Kubernetes manifests and tests.
 
 | Folder | Service | Tech | Port |
 |--------|---------|------|------|
